@@ -1,5 +1,6 @@
 package main;
 
+
 import java.util.*;
 import java.io.*;
 import java.math.*;
@@ -27,13 +28,43 @@ class Player {
         
         while (true) {
             Gate skynetGate = gates.get(in.nextInt()); 
+            Gate gateToCut = getGateWithTheMostSimpleLinkedGateaways();
         	if (skynetGate.isLinkedToAGateAway()) {
         		cutLink(skynetGate.getGateNumber(), skynetGate.getLinkedGateAway().getGateNumber());
         	}
+        	else if (skynetGate.getLinkToKillSkynet() != null) {
+        		cutLink(skynetGate.getLinkToKillSkynet().getGateNumber() , 
+        				skynetGate.getGateNumber());
+        	}
+        	else if (gateToCut != null && gateToCut.getRandomLinkedNoGateAway() != null){
+            	cutLink(gateToCut.getGateNumber(),gateToCut.getRandomLinkedNoGateAway().getGateNumber());
+        	}
         	else {
-        		cutLink(skynetGate.getGateNumber(), (int) skynetGate.getLinkedGates().toArray()[0]);
+        		gateToCut = cutRandomLink();
+            	cutLink(gateToCut.getGateNumber(),gateToCut.getRandomLink().getGateNumber());        		
         	}
         }
+    }
+	private static Gate cutRandomLink() {
+		for (Gate gate : gates.values()) {
+			if (gate.getRandomLink()!= null) {
+				return gate;
+			}
+		}
+		return null;
+	}
+	//System.err.println
+    private static Gate getGateWithTheMostSimpleLinkedGateaways() {
+    	int maxSimpleLinkedGateaways = 0;
+    	Gate gateWithMaxSimpleLinkedGateawatys = null;
+    	for (Gate gate : gates.values()) {
+    		int tempMaxSimpleLinkedGateaways = gate.getAmountOfSimpleLinkedGateaways();
+    		if (maxSimpleLinkedGateaways < tempMaxSimpleLinkedGateaways) {
+    			maxSimpleLinkedGateaways = tempMaxSimpleLinkedGateaways;
+    			gateWithMaxSimpleLinkedGateawatys = gate;
+    		}
+    	}
+    	return gateWithMaxSimpleLinkedGateawatys;
     }
 
 	private static void setGateawaysInGates(Scanner in, int numberOfGateaways) {
@@ -55,6 +86,8 @@ class Player {
     }
     private static void cutLink(int gateA, int gateB) {
     	System.out.println(""+gateA + " " + gateB);
+    	gates.get(gateA).removeGate(gateB);
+    	gates.get(gateB).removeGate(gateA);
     }
     
     private static class Gate {
@@ -66,8 +99,96 @@ class Player {
 	    public Gate(int gateNumber) {
 	        this.gateNumber = gateNumber;
 	    }
+	    
+	    public Gate getLinkToKillSkynet() {
+			if (hasOnlyOneLink() && getRandomLink().getLinkedGates().size() == 2) {
+				return getRandomLink();
+			}
+			else if (getLinkedGates().size() == 2) {
+				Gate gateFirstSide = gates.get(getLinkedGates().toArray()[0]);
+				Gate gateSecondSide = gates.get(getLinkedGates().toArray()[1]);
+				if (gateFirstSide.closedRecursiveLink(getGateNumber()) && gateSecondSide.getRandomLink().getLinkedGates().size() == 2){
+					return gateSecondSide;
+				}
+				else if (gateSecondSide.closedRecursiveLink(getGateNumber()) && gateFirstSide.getRandomLink().getLinkedGates().size() == 2){
+					return gateFirstSide;
+				}
+			}
+			return null;
+		}
+	    
+	    private boolean closedRecursiveLink(int sourceGate) {
+	    	if (hasOnlyOneLink()) {
+	    		return true;
+	    	}
+	    	else if (getLinkedGates().size() == 2){
+	    		for (int gateNumber : getLinkedGates()) {
+	    			if (gateNumber != sourceGate) {
+	    				return true;
+	    			}
+	    		}
+	    	}
+	    	return false;
+	    }
+
+		public void removeGate(int gateB) {
+			linksToGates.remove(gateB);
+		}
+
+		public int getAmountOfSimpleLinkedGateaways() {
+	    	return getRecursiveAmountOfSimpleLinkedGateaways(0);
+	    }
+	    
+	    private int getRecursiveAmountOfSimpleLinkedGateaways(int fromGate) {
+	    	int amountOfSimpleLinkedGateaways=0;
+	    	if (hasOnlyOneLinkWithoutGateawaysAndNotFromSourceGate()) {
+	    	for (Integer gate : linksToGates) {
+	    		if (gate != fromGate) {
+	    			if (gates.get(gate).isGateaway()) {
+	    				amountOfSimpleLinkedGateaways++;
+	    			}
+	    			else {
+	    				amountOfSimpleLinkedGateaways += gates.get(gate).getRecursiveAmountOfSimpleLinkedGateaways(getGateNumber());
+	    			}
+	    		}
+	    	}
+	    	}
+	    	return amountOfSimpleLinkedGateaways;
+	    }
 	
-	    public boolean isLinkedToAGateAway() {
+	    private boolean hasOnlyOneLinkWithoutGateawaysAndNotFromSourceGate() {
+			return isLinkedToAGateAway()? linksToGates.size()<=3 : linksToGates.size()<=2;
+		}
+	    
+	    public boolean hasOnlyOneLink() {
+	    	return linksToGates.size() == 1;
+	    }
+	    
+	    public Integer getLinkedGateNumberNotMatching(int gateNumber) {
+	    	for (Integer gate : linksToGates) {
+	    		if (gate != gateNumber)
+	    			return gate;
+	    		}
+	    	return null;
+	    }
+	    
+	    public Gate getRandomLinkedNoGateAway() {
+	    	for (Integer gate : linksToGates) {
+	    		if (!gates.get(gate).isGateaway()) {
+	    			return gates.get(gate);
+	    		}
+	    	}
+	    	return null;
+	    }
+	    
+	    public Gate getRandomLink() {
+	    	for (Integer gate : linksToGates) {
+	    			return gates.get(gate);
+	    	}
+	    	return null;
+	    }
+
+		public boolean isLinkedToAGateAway() {
 	    	for (Integer gate : linksToGates) {
 	    		if (gates.get(gate).isGateaway()) {
 	    			return true;
