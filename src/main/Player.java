@@ -29,7 +29,9 @@ class Player {
             Gate skynetGate = gates.get(in.nextInt()); 
         	if (skynetGate.isLinkedToAGateAway()) {
         		cutLink(skynetGate.getGateNumber(), skynetGate.getLinkedGateAway().getGateNumber());
-        		
+        	}
+        	else {
+        		cutLink(skynetGate.getGateNumber(), (int) skynetGate.getLinkedGates().toArray()[0]);
         	}
         }
     }
@@ -73,6 +75,10 @@ class Player {
 	    	}
 	    	return false;
 		}
+	    
+	    public Set<Integer> getLinkedGates() {
+	    	return linksToGates;
+	    }
 	    
 	    public Gate getLinkedGateAway() {
 	    	for (Integer gate : linksToGates) {
